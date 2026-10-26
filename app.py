@@ -251,7 +251,7 @@ with st.sidebar:
     st.caption("Commandes de séries en local · Chat libre via OpenRouter lorsque la clé est configurée.")
 
 st.markdown('<div class="chat-header"><div class="avatar">◈</div><div style="flex:1"><div class="chat-name">TimesFM Assistant</div><div class="muted"><span class="status-dot"></span>Prêt à analyser tes séries temporelles</div></div><div class="pill">LOCAL WORKSPACE</div></div>',unsafe_allow_html=True)
-chat_tab,data_tab,history_tab=st.tabs(["✦  Conversation","⌁  Données & prévisions","▤  Activité"])
+chat_tab,data_tab,ml_tab,history_tab=st.tabs(["✦  Conversation","⌁  Données & prévisions","🧠  Machine learning","▤  Activité"])
 with chat_tab:
     if st.session_state.series is not None:
         c1,c2,c3=st.columns(3)
@@ -318,6 +318,59 @@ with data_tab:
             if f["bounds"] is not None: out["lower"]=f["bounds"][:,0]; out["upper"]=f["bounds"][:,1]
             st.dataframe(out,use_container_width=True,hide_index=True)
             st.download_button("Télécharger le CSV de prévision",out.to_csv(index=False).encode("utf-8"),file_name="timesfm_forecast.csv",mime="text/csv")
+with ml_tab:
+    st.markdown("### Atelier de machine learning")
+    st.caption("Compare plusieurs modèles supervisés par validation chronologique, puis entraîne le meilleur sur toute la série. Cette fonction nécessite au moins 40 observations.")
+    if st.session_state.series is None:
+        st.info("Charge un CSV ou la démo avant de lancer l’entraînement.")
+    else:
+        ml_series=st.session_state.series.to_numpy(dtype=float)
+        st.markdown(f"**Série active :** {st.session_state.series_name} · **{len(ml_series)} observations**")
+        ml1,ml2=st.columns([1,2])
+        with ml1:
+            ml_horizon=st.select_slider("Horizon de prévision ML",options=[7,14,30,60,90],value=30)
+            st.caption("Validation chronologique : les modèles sont évalués sur des points postérieurs à leur entraînement.")
+            run_ml=st.button("Entraîner et comparer les modèles",type="primary",use_container_width=True,disabled=len(ml_series)<40)
+        with ml2:
+            st.markdown("**Modèles comparés**")
+            st.write("Ridge · Random Forest · Extra Trees · Gradient Boosting")
+            st.write("Sélection automatique selon la MAE de validation ; aucun mélange aléatoire des dates.")
+        if len(ml_series)<40:
+            st.warning("Il faut au moins 40 observations pour une comparaison ML raisonnable.")
+        if run_ml:
+            try:
+                from core import machine_learning_forecast
+                with st.spinner("Entraînement et validation chronologique des modèles…"):
+                    result=machine_learning_forecast(ml_series,ml_horizon)
+                st.session_state.ml_result=result
+                st.session_state.tasks.insert(0,{"action":f"Machine learning {ml_horizon} périodes","heure":datetime.now().strftime("%H:%M:%S"),"moteur":result["best_model"]})
+                st.session_state.tasks=st.session_state.tasks[:100]
+            except Exception as exc:
+                st.error(f"Entraînement ML impossible : {type(exc).__name__}: {exc}")
+        result=st.session_state.get("ml_result")
+        if result and result.get("history_points")==len(ml_series):
+            a,b,c=st.columns(3)
+            a.metric("Meilleur modèle",result["best_model"])
+            b.metric("MAE validation",f"{result['mae']:.4g}")
+            c.metric("RMSE validation",f"{result['rmse']:.4g}")
+            st.caption(f"Scores calculés sur {result['validation_points']} points de validation. Ils mesurent les erreurs passées, pas une garantie des performances futures.")
+            scores=pd.DataFrame(result["scores"]).sort_values("mae")
+            st.dataframe(scores,use_container_width=True,hide_index=True)
+            ml_dates=None
+            if st.session_state.dates is not None and len(st.session_state.dates)>1:
+                delta=st.session_state.dates.to_series().diff().dropna().median()
+                if pd.isna(delta) or delta<=pd.Timedelta(0): delta=pd.Timedelta(days=1)
+                ml_dates=pd.DatetimeIndex([st.session_state.dates[-1]+delta*(i+1) for i in range(result["horizon"])])
+            else:
+                ml_dates=np.arange(len(ml_series),len(ml_series)+result["horizon"])
+            ml_fig=go.Figure()
+            hist_dates=st.session_state.dates if st.session_state.dates is not None else np.arange(len(ml_series))
+            ml_fig.add_trace(go.Scatter(x=hist_dates,y=ml_series,name="Historique",line=dict(color="#b5a3ff",width=2)))
+            ml_fig.add_trace(go.Scatter(x=ml_dates,y=result["forecast"],name=f"ML · {result['best_model']}",line=dict(color="#7de6ca",width=2.5)))
+            ml_fig.update_layout(template="plotly_dark",height=390,paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",margin=dict(l=5,r=5,t=15,b=5),legend=dict(orientation="h"))
+            st.plotly_chart(ml_fig,use_container_width=True)
+            ml_out=pd.DataFrame({"date":np.asarray(ml_dates).astype(str),"forecast_ml":result["forecast"]})
+            st.download_button("Télécharger les prévisions ML",ml_out.to_csv(index=False).encode("utf-8"),file_name="timesfm_ml_forecast.csv",mime="text/csv")
 with history_tab:
     st.markdown("### Activité de cette session")
     if st.session_state.tasks: st.dataframe(pd.DataFrame(st.session_state.tasks),use_container_width=True,hide_index=True)
