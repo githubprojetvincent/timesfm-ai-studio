@@ -14,6 +14,8 @@ Interface web sombre inspirée des consoles d'agents IA, dédiée aux séries te
 - Mode statistique de secours avec bande indicative, explicitement identifié.
 - Dashboard Plotly, historique de session et téléchargement CSV des prévisions et des données chargées.
 - Diagnostics rapides de dispersion et variation début-fin.
+- Atelier ML supervisé : Ridge, Random Forest, Extra Trees et Gradient Boosting comparés par validation chronologique, avec sélection automatique selon la MAE.
+- Export CSV des prévisions issues du pipeline de machine learning.
 - Bouton de test OpenRouter (vérifie la clé et l’accès au catalogue sans lancer de génération).
 - Démarrage via Windows PowerShell ou Docker Compose.
 
