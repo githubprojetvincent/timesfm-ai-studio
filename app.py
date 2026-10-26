@@ -77,29 +77,83 @@ def do_forecast(horizon):
     pct=(pred[-1]/series.iloc[-1]-1)*100 if series.iloc[-1] else 0
     return f"Prévision terminée sur {horizon} périodes. Dernière estimation : {pred[-1]:.3f} ({pct:+.1f}% par rapport à la dernière observation). Moteur : {engine}. Une prévision n'est pas une garantie."
 
-def answer(prompt):
+def local_action(prompt):
     text=prompt.lower()
     if any(w in text for w in ("efface","vider la conversation","effacer le chat")):
         st.session_state.messages = [{"role":"assistant","content":"Conversation réinitialisée. Tes données chargées restent disponibles."}]
         return "Conversation réinitialisée."
-    if any(w in text for w in ("aide","help","commande","capacités")):
-        return "Actions disponibles : charge la démo, analyse les données, prévois 7/30/90 jours, ou importe un CSV. Le chat intégré exécute des commandes locales ; il ne s'agit pas encore d'un LLM généraliste."
-    if any(w in text for w in ("démo","demo","exemple")):
-        s,d,name=demo(); st.session_state.series=s; st.session_state.dates=d; st.session_state.series_name=name
-        st.session_state.forecast=None
-        return "Démo synthétique chargée : 180 observations journalières. Tu peux maintenant demander une analyse ou une prévision."
-    if st.session_state.series is None:
-        return "Aucune série chargée. Utilise l'import CSV dans la barre latérale ou demande « charge la démo »."
-    if any(w in text for w in ("analyse","résume","resume","statistique","tendance")):
+    if any(w in text for w in ("charge la démo","charger la démo","charge demo","charger demo","démo","demo")):
+        if any(w in text for w in ("charge","charger","démo","demo")):
+            s,d,name=demo(); st.session_state.series=s; st.session_state.dates=d; st.session_state.series_name=name
+            st.session_state.forecast=None
+            return "Démo synthétique chargée : 180 observations journalières. Tu peux maintenant demander une analyse ou une prévision."
+    if any(w in text for w in ("analyse","résume","resume","statistique","tendance")) and st.session_state.series is not None:
         y=st.session_state.series.to_numpy()
         delta=(y[-1]/y[0]-1)*100 if y[0] else 0
         return f"Analyse de « {st.session_state.series_name} » : {len(y)} points, moyenne {np.mean(y):.3f}, médiane {np.median(y):.3f}, minimum {np.min(y):.3f}, maximum {np.max(y):.3f}, variation début-fin {delta:+.1f}%. Moyenne des 14 dernières valeurs : {np.mean(y[-min(14,len(y)):]):.3f}."
     match=re.search(r"(\d{1,3})\s*(?:jours?|périodes?|periodes?|points?|valeurs?)",text)
     horizon=int(match.group(1)) if match else 30
     if any(w in text for w in ("prévoi","prevoi","prédit","predit","forecast","projection","projette","futur","calcul","lance")):
+        if st.session_state.series is None:
+            return "Aucune série chargée. Importe un CSV ou écris « charge la démo » avant de demander une prévision."
         return do_forecast(horizon)
-    return "Essaie « analyse les données », « prévois 30 jours » ou « aide »."
+    if any(w in text for w in ("aide","help","commande","capacités")):
+        return "Je peux analyser une série, prévoir 7/30/90 jours, charger la démo et répondre aux questions générales via OpenRouter si la clé API est configurée."
+    return None
 
+def openrouter_chat(prompt, api_key, model):
+    import json
+    import requests
+    messages=[{"role":"system","content":(
+        "Tu es TimesFM AI Studio, un assistant francophone utile, concis et honnête. "
+        "Tu aides sur l'analyse de séries temporelles, les prévisions et les questions générales. "
+        "Ne prétends pas avoir exécuté une analyse ou une prévision si les outils locaux ne l'ont pas fait. "
+        "Si le contexte contient des statistiques, utilise-les et distingue les faits des hypothèses. "
+        "Les prévisions ne sont jamais garanties."
+    )}]
+    if st.session_state.series is not None:
+        y=st.session_state.series.to_numpy()
+        context={"series_name":st.session_state.series_name,"observations":len(y),
+                 "mean":float(np.mean(y)),"median":float(np.median(y)),
+                 "minimum":float(np.min(y)),"maximum":float(np.max(y)),
+                 "last_value":float(y[-1]),"forecast_available":st.session_state.forecast is not None}
+        messages.append({"role":"system","content":"Contexte actuel de données (JSON) : "+json.dumps(context,ensure_ascii=False)})
+    for item in st.session_state.messages[-16:]:
+        if item.get("role") in ("user","assistant"):
+            messages.append({"role":item["role"],"content":str(item.get("content",""))[:8000]})
+    messages.append({"role":"user","content":prompt})
+    response=requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={"Authorization":f"Bearer {api_key}","Content-Type":"application/json",
+                 "HTTP-Referer":"https://github.com/githubprojetvincent/timesfm-ai-studio",
+                 "X-Title":"TimesFM AI Studio"},
+        json={"model":model,"messages":messages,"temperature":0.6},
+        timeout=90
+    )
+    if response.status_code >= 400:
+        try:
+            detail=response.json().get("error",{}).get("message",response.text)
+        except Exception:
+            detail=response.text
+        raise RuntimeError(f"OpenRouter ({response.status_code}) : {str(detail)[:500]}")
+    choices=response.json().get("choices",[])
+    if not choices or not choices[0].get("message",{}).get("content"):
+        raise RuntimeError("OpenRouter a renvoyé une réponse vide.")
+    return choices[0]["message"]["content"].strip()
+
+def answer(prompt):
+    action=local_action(prompt)
+    if action is not None:
+        return action
+    api_key=st.session_state.get("openrouter_key","").strip() or os.environ.get("OPENROUTER_API_KEY","").strip()
+    model=st.session_state.get("openrouter_model","openrouter/auto").strip() or "openrouter/auto"
+    if api_key:
+        try:
+            return openrouter_chat(prompt,api_key,model)
+        except Exception as exc:
+            return f"Connexion OpenRouter impossible : {exc}\n\nVérifie la clé API, le modèle choisi et le crédit disponible sur ton compte OpenRouter. Ta clé n'est pas affichée dans la conversation."
+    return ("Je peux discuter librement une fois OpenRouter configuré. Dans la barre latérale, ajoute ta clé API OpenRouter et choisis un modèle. "
+            "Sans clé, je garde les fonctions locales : démo, analyse statistique et prévisions.")
 with st.sidebar:
     st.markdown("## ◈ TimesFM")
     st.caption("AI Studio · Assistant de prévision")
@@ -107,6 +161,24 @@ with st.sidebar:
     if st.button("＋ Nouvelle conversation",use_container_width=True):
         st.session_state.messages=[{"role":"assistant","content":"Nouvelle conversation ouverte. Charge une série ou demande la démo pour commencer."}]
         st.rerun()
+    st.markdown("#### Chat IA · OpenRouter")
+    st.caption("Connecte un modèle de langage pour activer les conversations libres.")
+    env_key=os.environ.get("OPENROUTER_API_KEY","").strip()
+    if env_key:
+        st.success("Clé OpenRouter chargée depuis l’environnement.")
+        st.session_state.setdefault("openrouter_key","")
+    else:
+        st.text_input(
+            "Clé API OpenRouter",type="password",key="openrouter_key",
+            placeholder="sk-or-v1-…",
+            help="Saisie en session uniquement. Pour une configuration durable, utilise la variable d’environnement OPENROUTER_API_KEY."
+        )
+    st.text_input(
+        "Modèle OpenRouter",key="openrouter_model",
+        help="Exemple : openrouter/auto ou l’identifiant exact d’un modèle disponible sur OpenRouter."
+    )
+    st.caption("La clé sert à authentifier les requêtes envoyées à OpenRouter. Ne la publie jamais dans Git.")
+    st.divider()
     st.markdown("#### Données")
     uploaded=st.file_uploader("Importer un CSV",type=["csv"],help="Une colonne numérique est nécessaire ; la date est facultative.")
     if uploaded is not None:
@@ -148,7 +220,7 @@ with st.sidebar:
     st.divider()
     st.markdown("#### État du moteur")
     st.markdown(f'<div class="tip"><span class="status-dot"></span><b>TimesFM 2.5</b><div class="muted" style="margin-top:5px">{st.session_state.engine}</div></div>',unsafe_allow_html=True)
-    st.caption("Le chat exécute des commandes locales ; il n’est pas encore relié à un LLM généraliste.")
+    st.caption("Commandes de séries en local · Chat libre via OpenRouter lorsque la clé est configurée.")
 
 st.markdown('<div class="chat-header"><div class="avatar">◈</div><div style="flex:1"><div class="chat-name">TimesFM Assistant</div><div class="muted"><span class="status-dot"></span>Prêt à analyser tes séries temporelles</div></div><div class="pill">LOCAL WORKSPACE</div></div>',unsafe_allow_html=True)
 chat_tab,data_tab,history_tab=st.tabs(["✦  Conversation","⌁  Données & prévisions","▤  Activité"])
