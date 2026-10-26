@@ -10,7 +10,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\start.ps1
 ```
 
-4. Va sur http://localhost:8501.
+4. Va sur http://localhost:8501.\n5. Facultatif : configure OpenRouter dans le panneau latéral pour activer le chat généraliste.
 
 ## Docker Desktop
 Dans la racine du projet :
