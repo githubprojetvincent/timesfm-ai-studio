@@ -142,6 +142,22 @@ def openrouter_chat(prompt, api_key, model):
         raise RuntimeError("OpenRouter a renvoyé une réponse vide.")
     return choices[0]["message"]["content"].strip()
 
+def check_openrouter(api_key):
+    import requests
+    response=requests.get(
+        "https://openrouter.ai/api/v1/models",
+        headers={"Authorization":f"Bearer {api_key}","HTTP-Referer":"https://github.com/githubprojetvincent/timesfm-ai-studio","X-Title":"TimesFM AI Studio"},
+        timeout=20
+    )
+    if response.status_code >= 400:
+        try: detail=response.json().get("error",{}).get("message",response.text)
+        except Exception: detail=response.text
+        raise RuntimeError(f"OpenRouter ({response.status_code}) : {str(detail)[:300]}")
+    payload=response.json()
+    count=len(payload.get("data",[]))
+    return f"Connexion réussie. Catalogue OpenRouter accessible ({count} modèles listés)."
+
+
 def answer(prompt):
     action=local_action(prompt)
     if action is not None:
@@ -179,6 +195,17 @@ with st.sidebar:
         help="Exemple : openrouter/auto ou l’identifiant exact d’un modèle disponible sur OpenRouter."
     )
     st.caption("La clé sert à authentifier les requêtes envoyées à OpenRouter. Ne la publie jamais dans Git.")
+    if st.button("Tester la connexion OpenRouter",use_container_width=True):
+        active_key=env_key or st.session_state.get("openrouter_key","").strip()
+        if not active_key:
+            st.warning("Ajoute d’abord une clé API.")
+        else:
+            try:
+                with st.spinner("Vérification de la clé et du service…"):
+                    status=check_openrouter(active_key)
+                st.success(status)
+            except Exception as exc:
+                st.error(f"Test échoué : {exc}")
     st.divider()
     st.markdown("#### Données")
     uploaded=st.file_uploader("Importer un CSV",type=["csv"],help="Une colonne numérique est nécessaire ; la date est facultative.")
@@ -276,6 +303,16 @@ with data_tab:
                 fig.add_trace(go.Scatter(x=f["dates"],y=f["bounds"][:,0],line=dict(width=0),fill="tonexty",fillcolor="rgba(125,230,202,.12)",name="Bande indicative"))
         fig.update_layout(template="plotly_dark",height=430,paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",margin=dict(l=5,r=5,t=15,b=5),legend=dict(orientation="h"))
         st.plotly_chart(fig,use_container_width=True)
+        # Diagnostics rapides : ils aident à repérer les données peu fiables avant l'interprétation.
+        finite_values=series.to_numpy(dtype=float)
+        d1,d2,d3=st.columns(3)
+        d1.metric("Valeurs manquantes", "0", help="Les valeurs manquantes sont retirées à l’import.")
+        d2.metric("Écart-type", f"{np.std(finite_values, ddof=1):.3f}" if len(finite_values)>1 else "—")
+        d3.metric("Variation début-fin", f"{((finite_values[-1]/finite_values[0]-1)*100):+.1f}%" if finite_values[0] != 0 else "Non calculable")
+        hist_out=pd.DataFrame({"value":finite_values})
+        if st.session_state.dates is not None:
+            hist_out.insert(0,"date",pd.Series(st.session_state.dates).astype(str).to_numpy())
+        st.download_button("Télécharger les données chargées",hist_out.to_csv(index=False).encode("utf-8"),file_name="timesfm_history.csv",mime="text/csv")
         if f:
             out=pd.DataFrame({"date":np.asarray(f["dates"]).astype(str),"forecast":f["values"]})
             if f["bounds"] is not None: out["lower"]=f["bounds"][:,0]; out["upper"]=f["bounds"][:,1]
