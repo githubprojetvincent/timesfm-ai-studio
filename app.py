@@ -79,6 +79,9 @@ def do_forecast(horizon):
 
 def answer(prompt):
     text=prompt.lower()
+    if any(w in text for w in ("efface","vider la conversation","effacer le chat")):
+        st.session_state.messages = [{"role":"assistant","content":"Conversation réinitialisée. Tes données chargées restent disponibles."}]
+        return "Conversation réinitialisée."
     if any(w in text for w in ("aide","help","commande","capacités")):
         return "Actions disponibles : charge la démo, analyse les données, prévois 7/30/90 jours, ou importe un CSV. Le chat intégré exécute des commandes locales ; il ne s'agit pas encore d'un LLM généraliste."
     if any(w in text for w in ("démo","demo","exemple")):
