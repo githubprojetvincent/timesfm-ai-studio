@@ -50,31 +50,11 @@ def load_model():
     return model
 
 def forecast(values,horizon,allow_fallback=True):
-    values=np.asarray(values,dtype=np.float32)
-    if values.ndim!=1 or len(values)<10 or not np.isfinite(values).all():
-        raise ValueError("La série doit contenir au moins 10 valeurs numériques finies.")
-    horizon=max(1,min(512,int(horizon)))
-    try:
-        model=load_model()
-        preds,quantiles=model.forecast(horizon=horizon,inputs=[values])
-        pred=np.asarray(preds[0],dtype=float)[:horizon]
-        if len(pred)!=horizon or not np.isfinite(pred).all(): raise ValueError("Le modèle a renvoyé des valeurs invalides.")
-        bounds=None
-        if quantiles is not None:
-            q=np.asarray(quantiles)
-            if q.ndim==3 and q.shape[1]>=horizon and q.shape[2]>=2:
-                q=q[0,:horizon,:]
-                bounds=np.column_stack((q[:,1],q[:,-1])) if q.shape[1]>=9 else None
-        return pred,bounds,"TimesFM 2.5 — modèle officiel"
-    except Exception as exc:
-        if not allow_fallback: raise
-        window=min(len(values),max(10,min(60,len(values)//2)))
-        y=values[-window:]; x=np.arange(window)
-        slope,intercept=np.polyfit(x,y,1)
-        pred=slope*np.arange(window,window+horizon)+intercept
-        resid=y-(slope*x+intercept); spread=max(float(np.std(resid)),float(np.mean(np.abs(y)))*.03,1e-6)
-        radius=1.28*spread*np.sqrt(np.arange(1,horizon+1))
-        return pred,np.column_stack((pred-radius,pred+radius)),f"Mode statistique de secours — {type(exc).__name__}: {str(exc)[:120]}"
+    from core import forecast_series
+    # Use the cached model loader in the UI; the core handles validation and fallback.
+    if allow_fallback:
+        return forecast_series(values,horizon,model_loader=load_model)
+    return forecast_series(values,horizon,model_loader=load_model)
 
 def do_forecast(horizon):
     series=st.session_state.series
