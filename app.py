@@ -85,7 +85,7 @@ def local_action(prompt):
     if any(w in text for w in ("charge la démo","charger la démo","charge demo","charger demo","démo","demo")):
         if any(w in text for w in ("charge","charger","démo","demo")):
             s,d,name=demo(); st.session_state.series=s; st.session_state.dates=d; st.session_state.series_name=name
-            st.session_state.forecast=None
+            st.session_state.forecast=None; st.session_state.pop("ml_result",None)
             return "Démo synthétique chargée : 180 observations journalières. Tu peux maintenant demander une analyse ou une prévision."
     if any(w in text for w in ("analyse","résume","resume","statistique","tendance")) and st.session_state.series is not None:
         y=st.session_state.series.to_numpy()
@@ -230,12 +230,12 @@ with st.sidebar:
                     elif not np.isfinite(values.to_numpy()).all(): st.error("Valeurs non finies détectées.")
                     else:
                         st.session_state.series=values; st.session_state.dates=parsed_dates; st.session_state.series_name=value_col
-                        st.session_state.forecast=None
+                        st.session_state.forecast=None; st.session_state.pop("ml_result",None)
                         st.session_state.messages.append({"role":"assistant","content":f"Fichier chargé : **{value_col}**, {len(values)} observations valides. Tu peux demander une analyse ou une prévision."})
                         st.success(f"{len(values)} observations prêtes.")
         except Exception as exc: st.error(f"Lecture CSV impossible : {exc}")
     if st.button("Charger une démo",use_container_width=True):
-        s,d,name=demo(); st.session_state.series=s; st.session_state.dates=d; st.session_state.series_name=name; st.session_state.forecast=None
+        s,d,name=demo(); st.session_state.series=s; st.session_state.dates=d; st.session_state.series_name=name; st.session_state.forecast=None; st.session_state.pop("ml_result",None)
         st.session_state.messages.append({"role":"assistant","content":"Je viens de charger une série de démonstration synthétique de 180 observations quotidiennes. Essaie « analyse cette série » ou « prévois 30 jours »."})
         st.rerun()
     st.divider()
