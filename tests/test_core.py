@@ -24,3 +24,16 @@ class ForecastCoreTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_ml_requires_enough_observations(self):
+        with self.assertRaises(ValueError):
+            core.machine_learning_forecast(np.arange(20, dtype=float), 5)
+
+    def test_ml_forecast_returns_finite_values_and_scores(self):
+        x = np.arange(70, dtype=float)
+        y = 10 + 0.2*x + 2*np.sin(x/4)
+        result = core.machine_learning_forecast(y, 5)
+        self.assertEqual(len(result["forecast"]), 5)
+        self.assertTrue(np.isfinite(result["forecast"]).all())
+        self.assertGreaterEqual(len(result["scores"]), 2)
+        self.assertIn("mae", result)
