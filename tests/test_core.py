@@ -26,6 +26,13 @@ class ForecastCoreTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             core.machine_learning_forecast(np.arange(20, dtype=float), 5)
 
+    def test_anomaly_detector_finds_spike(self):
+        y = np.ones(40, dtype=float)
+        y[30] = 25
+        result = core.detect_anomalies(y, window=10, threshold=3.5)
+        self.assertIn(30, result["indices"])
+        self.assertTrue(np.isfinite(result["scores"]).all())
+
     def test_ml_forecast_returns_finite_values_and_scores(self):
         x = np.arange(70, dtype=float)
         y = 10 + 0.2*x + 2*np.sin(x/4)
@@ -33,6 +40,7 @@ class ForecastCoreTests(unittest.TestCase):
         self.assertEqual(len(result["forecast"]), 5)
         self.assertTrue(np.isfinite(result["forecast"]).all())
         self.assertGreaterEqual(len(result["scores"]), 2)
+        self.assertGreaterEqual(len(result["baseline_scores"]), 1)
         self.assertIn("mae", result)
 
 if __name__ == "__main__":
