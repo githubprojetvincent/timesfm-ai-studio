@@ -16,6 +16,8 @@ Interface web sombre inspirée des consoles d'agents IA, dédiée aux séries te
 - Diagnostics rapides de dispersion et variation début-fin.
 - Atelier ML supervisé : Ridge, Random Forest, Extra Trees et Gradient Boosting comparés par validation chronologique, avec sélection automatique selon la MAE.
 - Export CSV des prévisions issues du pipeline de machine learning.
+- Comparaison aux références simples (dernière valeur, saisonnier hebdomadaire, tendance linéaire) pour vérifier si le ML apporte une réelle amélioration.
+- Détection robuste d’anomalies par médiane glissante et écart absolu médian (MAD), avec seuil réglable et export CSV.
 - Bouton de test OpenRouter (vérifie la clé et l’accès au catalogue sans lancer de génération).
 - Démarrage via Windows PowerShell ou Docker Compose.
 
