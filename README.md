@@ -2,7 +2,7 @@
 
 Interface web sombre inspirée des consoles d'agents IA, dédiée aux séries temporelles : chat à commandes, import CSV, analyse descriptive, prévision, graphique et export.
 
-> Le chat actuel exécute des commandes locales prédéfinies. Ce n'est pas encore un chatbot LLM libre. Le moteur TimesFM 2.5 est tenté en premier ; un fallback statistique est affiché clairement si le chargement du modèle échoue. La dépendance Python est limitée à TimesFM 2.x pour éviter une migration API implicite.
+> Le chat prend en charge OpenRouter : configure une clé API dans le panneau latéral ou via la variable d’environnement `OPENROUTER_API_KEY` pour activer les conversations libres. Sans clé, les commandes locales de séries temporelles restent disponibles. Le moteur TimesFM 2.5 est tenté en premier ; un fallback statistique est affiché clairement si le chargement du modèle échoue. La dépendance Python est limitée à TimesFM 2.x pour éviter une migration API implicite.
 
 ## Fonctions
 
@@ -39,6 +39,22 @@ docker compose -f compose.yaml up --build
 Puis http://localhost:8501. Arrêt : `docker compose down`. Les poids téléchargés sont conservés dans le volume `hf-cache`.
 
 Pour changer le port local : définir `TIMESFM_PORT=8502` avant de lancer Compose.
+
+## Connexion OpenRouter
+
+1. Crée une clé sur [OpenRouter](https://openrouter.ai/keys).
+2. Lance l’application et ouvre **Chat IA · OpenRouter** dans la barre latérale.
+3. Colle la clé dans le champ masqué **Clé API OpenRouter** et choisis un identifiant de modèle disponible, par exemple `openrouter/auto`.
+4. Envoie un message dans le chat. Les commandes de séries reconnues (analyse, prévision, démo) continuent d’être traitées localement ; les questions générales sont envoyées au modèle OpenRouter.
+
+Pour une configuration persistante sous PowerShell, définis la variable d’environnement avant le démarrage :
+
+```powershell
+$env:OPENROUTER_API_KEY="sk-or-v1-..."
+.\\start.ps1
+```
+
+La clé n’est pas écrite dans les fichiers du projet par l’application. Les requêtes de chat et le contexte statistique résumé sont envoyés à OpenRouter ; évite de fournir des données sensibles. L’usage peut être facturé selon ton compte et le modèle sélectionné.
 
 ## Utiliser l'agent
 
