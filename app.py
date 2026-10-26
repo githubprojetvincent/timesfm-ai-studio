@@ -31,7 +31,7 @@ div[data-testid="stMetric"]{background:#111a25;border:1px solid #263343;border-r
 .tip{border:1px solid #293747;background:#111923;border-radius:13px;padding:10px 12px;margin:6px 0;color:#dce7f3}
 hr{border-color:#263343}
 </style>
-, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 def init_state():
     defaults = {"messages":[{"role":"assistant","content":"Bienvenue dans TimesFM AI Studio. Charge un CSV ou utilise la démo, puis demande une analyse ou une prévision."}],
@@ -213,6 +213,3 @@ with history_tab:
     if st.session_state.tasks: st.dataframe(pd.DataFrame(st.session_state.tasks),use_container_width=True,hide_index=True)
     else: st.info("Les analyses et prévisions exécutées apparaîtront ici.")
 st.markdown('<div class="muted" style="text-align:center;padding:16px 0">TimesFM AI Studio · Chat séries temporelles · Le mode de secours est indiqué dans le statut du moteur</div>',unsafe_allow_html=True)
-
-
-st.markdown('<div class="mono" style="margin-top:22px">TIMESFM AI STUDIO · Interface OpenClaw-inspired · Chat local à commandes (pas de LLM généraliste configuré)</div>',unsafe_allow_html=True)
