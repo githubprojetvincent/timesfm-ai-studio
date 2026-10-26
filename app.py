@@ -10,24 +10,28 @@ st.set_page_config(page_title="TimesFM AI Studio", page_icon="◈", layout="wide
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
-:root{--bg:#080d14;--panel:#101722;--line:#273447;--text:#eaf0f8;--muted:#93a3b7;--mint:#79e6cb;--violet:#b6a0ff}
+:root{--bg:#090d13;--panel:#111720;--line:#26313f;--text:#edf2fa;--muted:#9aa9bb;--mint:#7de6ca;--lav:#b5a3ff}
 html,body,[class*="css"]{font-family:Manrope,sans-serif}
-.stApp{background:radial-gradient(ellipse at 60% -15%,#172d43 0%,#090f18 48%,#080d14 100%);color:var(--text)}
-.block-container{padding-top:1.2rem;max-width:1600px}
-section[data-testid="stSidebar"]{background:#0b111a;border-right:1px solid #202d3d}
-div[data-testid="stMetric"]{background:#111b28;border:1px solid #28374b;border-radius:14px;padding:12px}
-.stButton>button,.stDownloadButton>button{border:1px solid #2b3b50;border-radius:11px;background:#131f2d;color:#eaf0f8;font-weight:650;min-height:40px}
-.stButton>button:hover{border-color:var(--mint);color:var(--mint)}
-.stTextInput input,.stTextArea textarea{background:#0d1520!important;border:1px solid #2b3a4d!important;border-radius:12px!important;color:#eaf0f8!important}
-div[data-testid="stChatMessage"]{background:#111a27;border:1px solid #263447;border-radius:15px}
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border:1px solid #253448;border-radius:15px;background:#0f1723;margin-bottom:16px}
-.brand{font-weight:800;font-size:20px;letter-spacing:-.6px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#79e6cb;margin-right:8px}
-.mono{font-family:'DM Mono',monospace;color:#8fa4bb;font-size:11px;letter-spacing:.6px}
-.panel{background:#101824;border:1px solid #26364a;border-radius:16px;padding:16px}
-.agent{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:#121d2b;border:1px solid #26364a;margin:7px 0}
-.agent-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#203a45;color:#79e6cb;font-weight:800}
-.small{font-size:12px;color:#94a5b9}
-</style>""", unsafe_allow_html=True)
+.stApp{background:radial-gradient(ellipse at 50% -10%,#182738 0%,#0b1017 48%,#090d13 100%);color:var(--text)}
+.block-container{padding-top:1rem;padding-bottom:1rem;max-width:1500px}
+section[data-testid="stSidebar"]{background:#0b1119;border-right:1px solid #202b39}
+.stButton>button,.stDownloadButton>button{border:1px solid #2b394a;border-radius:12px;background:#141e2a;color:#edf2fa;font-weight:650;min-height:39px}
+.stButton>button:hover,.stDownloadButton>button:hover{border-color:var(--mint);color:var(--mint)}
+.stTextInput input,.stTextArea textarea{background:#101722!important;border:1px solid #2b394a!important;border-radius:12px!important;color:#edf2fa!important}
+div[data-testid="stChatMessage"]{background:transparent;border:0;padding:1rem .6rem}
+div[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]){background:#111a25;border:1px solid #202e3e;border-radius:17px}
+div[data-testid="stMetric"]{background:#111a25;border:1px solid #263343;border-radius:14px;padding:12px}
+.stTabs [data-baseweb="tab-list"]{gap:6px;border-bottom:1px solid #273343}
+.stTabs [data-baseweb="tab"]{background:#111822;border-radius:10px 10px 0 0;padding:10px 16px}
+.chat-header{display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid #263343;border-radius:17px;background:#101720;margin-bottom:15px}
+.avatar{width:42px;height:42px;background:linear-gradient(140deg,#1d4948,#252c4b);display:flex;align-items:center;justify-content:center;border-radius:14px;color:#8af0d7;font-size:18px;font-weight:800}
+.chat-name{font-weight:800;font-size:16px}.muted{font-size:12px;color:#96a7ba}
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#7de6ca;margin-right:6px}
+.pill{font:11px 'DM Mono',monospace;color:#a5b8cc;border:1px solid #2a3747;border-radius:999px;padding:5px 9px}
+.tip{border:1px solid #293747;background:#111923;border-radius:13px;padding:10px 12px;margin:6px 0;color:#dce7f3}
+hr{border-color:#263343}
+</style>
+, unsafe_allow_html=True)
 
 def init_state():
     defaults = {"messages":[{"role":"assistant","content":"Bienvenue dans TimesFM AI Studio. Charge un CSV ou utilise la démo, puis demande une analyse ou une prévision."}],
@@ -94,11 +98,14 @@ def answer(prompt):
     return "Essaie « analyse les données », « prévois 30 jours » ou « aide »."
 
 with st.sidebar:
-    st.markdown('<div class="mono">WORKSPACE / LOCAL AGENT</div>',unsafe_allow_html=True)
-    st.markdown("## ◈ TimesFM AI Studio")
-    st.caption("Assistant de séries temporelles")
+    st.markdown("## ◈ TimesFM")
+    st.caption("AI Studio · Assistant de prévision")
     st.divider()
-    uploaded=st.file_uploader("Importer un CSV",type=["csv"],help="CSV avec une colonne numérique et éventuellement une colonne date.")
+    if st.button("＋ Nouvelle conversation",use_container_width=True):
+        st.session_state.messages=[{"role":"assistant","content":"Nouvelle conversation ouverte. Charge une série ou demande la démo pour commencer."}]
+        st.rerun()
+    st.markdown("#### Données")
+    uploaded=st.file_uploader("Importer un CSV",type=["csv"],help="Une colonne numérique est nécessaire ; la date est facultative.")
     if uploaded is not None:
         try:
             df=pd.read_csv(uploaded)
@@ -106,94 +113,103 @@ with st.sidebar:
             if not numeric: st.warning("Aucune colonne avec au moins 10 valeurs numériques.")
             else:
                 value_col=st.selectbox("Colonne de valeurs",numeric)
-                date_choices=["(index)"]+list(df.columns)
-                date_col=st.selectbox("Colonne date (facultatif)",date_choices)
-                if st.button("Charger le CSV",use_container_width=True):
+                date_col=st.selectbox("Colonne date",["(index)"]+list(df.columns))
+                if st.button("Utiliser ce fichier",use_container_width=True):
                     vals=pd.to_numeric(df[value_col],errors="coerce")
                     if date_col!="(index)":
                         parsed=pd.to_datetime(df[date_col],errors="coerce")
-                        clean=pd.DataFrame({"value":vals,"date":parsed}).dropna()
-                        clean=clean.sort_values("date")
+                        clean=pd.DataFrame({"value":vals,"date":parsed}).dropna().sort_values("date")
                         values=clean["value"].astype(float).reset_index(drop=True)
                         parsed_dates=pd.DatetimeIndex(clean["date"])
                     else:
                         values=vals.dropna().astype(float).reset_index(drop=True); parsed_dates=None
-                    if len(values)<10: st.error("Il faut au moins 10 valeurs valides après nettoyage.")
-                    elif not np.isfinite(values.to_numpy()).all(): st.error("Le fichier contient des valeurs non finies.")
+                    if len(values)<10: st.error("Il faut au moins 10 valeurs valides.")
+                    elif not np.isfinite(values.to_numpy()).all(): st.error("Valeurs non finies détectées.")
                     else:
                         st.session_state.series=values; st.session_state.dates=parsed_dates; st.session_state.series_name=value_col
                         st.session_state.forecast=None
-                        st.success(f"{len(values)} observations chargées.")
+                        st.session_state.messages.append({"role":"assistant","content":f"Fichier chargé : **{value_col}**, {len(values)} observations valides. Tu peux demander une analyse ou une prévision."})
+                        st.success(f"{len(values)} observations prêtes.")
         except Exception as exc: st.error(f"Lecture CSV impossible : {exc}")
-    if st.button("Charger la démo",use_container_width=True):
-        s,d,name=demo(); st.session_state.series=s; st.session_state.dates=d; st.session_state.series_name=name; st.session_state.forecast=None; st.rerun()
+    if st.button("Charger une démo",use_container_width=True):
+        s,d,name=demo(); st.session_state.series=s; st.session_state.dates=d; st.session_state.series_name=name; st.session_state.forecast=None
+        st.session_state.messages.append({"role":"assistant","content":"Je viens de charger une série de démonstration synthétique de 180 observations quotidiennes. Essaie « analyse cette série » ou « prévois 30 jours »."})
+        st.rerun()
     st.divider()
-    st.markdown("**Moteur**")
-    st.markdown('<div class="agent"><div class="agent-icon">TF</div><div><b>TimesFM 2.5</b><div class="small">Forecast engine</div></div></div>',unsafe_allow_html=True)
-    st.caption(st.session_state.engine)
-    for n in (7,30,90):
-        if st.button(f"Prévoir {n} jours",key=f"side_{n}",use_container_width=True):
-            prompt=f"Prévois {n} jours"
-            st.session_state.messages.append({"role":"user","content":prompt})
-            with st.spinner("Calcul de la prévision…"): response=do_forecast(n)
+    st.markdown("#### Raccourcis")
+    for label,cmd in [("Analyser la série","Analyse les données"),("Prévoir 7 jours","Prévois 7 jours"),("Prévoir 30 jours","Prévois 30 jours"),("Prévoir 90 jours","Prévois 90 jours"),("Comment utiliser ?","Aide")]:
+        if st.button(label,key="quick_"+label,use_container_width=True):
+            st.session_state.messages.append({"role":"user","content":cmd})
+            with st.spinner("L’assistant traite la demande…"): response=answer(cmd)
             st.session_state.messages.append({"role":"assistant","content":response}); st.rerun()
-    if st.button("Nouvelle conversation",use_container_width=True):
-        st.session_state.messages=[{"role":"assistant","content":"Nouvelle session. Charge un CSV ou demande la démo."}]; st.rerun()
+    st.divider()
+    st.markdown("#### État du moteur")
+    st.markdown(f'<div class="tip"><span class="status-dot"></span><b>TimesFM 2.5</b><div class="muted" style="margin-top:5px">{st.session_state.engine}</div></div>',unsafe_allow_html=True)
+    st.caption("Le chat exécute des commandes locales ; il n’est pas encore relié à un LLM généraliste.")
 
-st.markdown('<div class="topbar"><div><span class="dot"></span><span class="brand">TimesFM AI Studio</span><div class="mono">PERSONAL FORECASTING WORKSPACE</div></div><div class="mono">LOCAL MODE · CHAT + TOOLS</div></div>',unsafe_allow_html=True)
-a,b,c,d=st.columns(4)
-a.metric("Série active",st.session_state.series_name if st.session_state.series is not None else "Aucune")
-b.metric("Observations",len(st.session_state.series) if st.session_state.series is not None else "—")
-c.metric("État", "Données prêtes" if st.session_state.series is not None else "En attente")
-d.metric("Tâches",len(st.session_state.tasks))
-chat,board,history=st.tabs(["◈ Chat agent","⌁ Dashboard","▤ Historique"])
-with chat:
-    left,right=st.columns([1.8,1],gap="large")
-    with left:
-        st.markdown("### Conversation")
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"],avatar="◈" if message["role"]=="assistant" else "●"):
-                st.markdown(message["content"])
-        prompt=st.chat_input("Demande une analyse ou une prévision…")
-        if prompt:
-            st.session_state.messages.append({"role":"user","content":prompt})
-            with st.spinner("Exécution de la demande…"): response=answer(prompt)
-            st.session_state.messages.append({"role":"assistant","content":response}); st.rerun()
-    with right:
-        st.markdown("### Agent runtime")
-        st.markdown('<div class="panel"><div class="mono">ACTIVE AGENT</div><h3 style="margin:8px 0">TimesFM Analyst</h3><p class="small">Analyse de séries · Prévision · Export</p><span class="mono">STATUS: READY</span></div>',unsafe_allow_html=True)
-        st.markdown("#### Outils disponibles")
-        for title,desc in [("CSV Loader","Import et nettoyage"),("Forecast Engine","TimesFM et fallback indiqué"),("Statistics","Résumé de la série"),("Chart Builder","Graphique interactif"),("CSV Export","Téléchargement des prévisions")]:
-            st.markdown(f'<div class="agent"><div class="agent-icon">↗</div><div><b>{title}</b><div class="small">{desc}</div></div></div>',unsafe_allow_html=True)
-        for label,command in [("Analyser les données","Analyse les données"),("Prévoir 30 jours","Prévois 30 jours"),("Aide","Aide")]:
-            if st.button(label,key="suggest_"+label,use_container_width=True):
-                st.session_state.messages.append({"role":"user","content":command})
-                with st.spinner("Exécution…"): response=answer(command)
-                st.session_state.messages.append({"role":"assistant","content":response}); st.rerun()
-with board:
-    st.markdown("### Dashboard de prévision")
-    if st.session_state.series is None: st.info("Charge un CSV ou les données de démonstration pour commencer.")
+st.markdown('<div class="chat-header"><div class="avatar">◈</div><div style="flex:1"><div class="chat-name">TimesFM Assistant</div><div class="muted"><span class="status-dot"></span>Prêt à analyser tes séries temporelles</div></div><div class="pill">LOCAL WORKSPACE</div></div>',unsafe_allow_html=True)
+chat_tab,data_tab,history_tab=st.tabs(["✦  Conversation","⌁  Données & prévisions","▤  Activité"])
+with chat_tab:
+    if st.session_state.series is not None:
+        c1,c2,c3=st.columns(3)
+        c1.metric("Série active",st.session_state.series_name)
+        c2.metric("Observations",len(st.session_state.series))
+        c3.metric("Prévision",f"{st.session_state.forecast['horizon']} points" if st.session_state.forecast else "Pas encore lancée")
+    else:
+        st.markdown("### Que souhaites-tu faire ?")
+        st.caption("Commence par une commande ou charge tes données dans le panneau à gauche.")
+        col1,col2,col3=st.columns(3)
+        with col1:
+            if st.button("📈  Charger la démo",use_container_width=True):
+                s,d,name=demo(); st.session_state.series=s; st.session_state.dates=d; st.session_state.series_name=name; st.rerun()
+        with col2:
+            if st.button("🔎  Analyse statistique",use_container_width=True):
+                cmd="Analyse les données"; st.session_state.messages.append({"role":"user","content":cmd}); st.session_state.messages.append({"role":"assistant","content":answer(cmd)}); st.rerun()
+        with col3:
+            if st.button("🗓️  Prévision 30 jours",use_container_width=True):
+                cmd="Prévois 30 jours"; st.session_state.messages.append({"role":"user","content":cmd}); st.session_state.messages.append({"role":"assistant","content":answer(cmd)}); st.rerun()
+    st.markdown("---")
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"],avatar="◈" if message["role"]=="assistant" else "●"):
+            st.markdown(message["content"])
+    prompt=st.chat_input("Écris ton message… (ex. : analyse les données, prévois 30 jours)")
+    if prompt:
+        st.session_state.messages.append({"role":"user","content":prompt})
+        with st.spinner("L’assistant réfléchit et exécute la commande…"):
+            try: response=answer(prompt)
+            except Exception as exc: response=f"Je n’ai pas pu terminer cette action : {type(exc).__name__}: {exc}"
+        st.session_state.messages.append({"role":"assistant","content":response})
+        st.rerun()
+with data_tab:
+    st.markdown("### Données et résultats")
+    if st.session_state.series is None:
+        st.info("Aucune série chargée. Utilise le bouton « Charger une démo » ou importe un CSV à gauche.")
     else:
         series=st.session_state.series
-        m1,m2,m3,m4=st.columns(4); m1.metric("Moyenne",f"{series.mean():.3f}"); m2.metric("Minimum",f"{series.min():.3f}"); m3.metric("Maximum",f"{series.max():.3f}"); m4.metric("Dernière valeur",f"{series.iloc[-1]:.3f}")
+        m1,m2,m3,m4=st.columns(4)
+        m1.metric("Moyenne",f"{series.mean():.3f}"); m2.metric("Minimum",f"{series.min():.3f}")
+        m3.metric("Maximum",f"{series.max():.3f}"); m4.metric("Dernière valeur",f"{series.iloc[-1]:.3f}")
         fig=go.Figure()
         history_x=st.session_state.dates if st.session_state.dates is not None else np.arange(len(series))
-        fig.add_trace(go.Scatter(x=history_x,y=series,name="Historique",line=dict(color="#9aafff",width=2)))
+        fig.add_trace(go.Scatter(x=history_x,y=series,name="Historique",line=dict(color="#b5a3ff",width=2)))
         f=st.session_state.forecast
         if f:
-            fig.add_trace(go.Scatter(x=f["dates"],y=f["values"],name="Prévision",line=dict(color="#79e6cb",width=2.5)))
+            fig.add_trace(go.Scatter(x=f["dates"],y=f["values"],name="Prévision",line=dict(color="#7de6ca",width=2.5)))
             if f["bounds"] is not None:
                 fig.add_trace(go.Scatter(x=f["dates"],y=f["bounds"][:,1],line=dict(width=0),showlegend=False,hoverinfo="skip"))
-                fig.add_trace(go.Scatter(x=f["dates"],y=f["bounds"][:,0],line=dict(width=0),fill="tonexty",fillcolor="rgba(121,230,203,.13)",name="Bande indicative"))
-        fig.update_layout(template="plotly_dark",height=440,paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",margin=dict(l=8,r=8,t=20,b=8),legend=dict(orientation="h"))
+                fig.add_trace(go.Scatter(x=f["dates"],y=f["bounds"][:,0],line=dict(width=0),fill="tonexty",fillcolor="rgba(125,230,202,.12)",name="Bande indicative"))
+        fig.update_layout(template="plotly_dark",height=430,paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",margin=dict(l=5,r=5,t=15,b=5),legend=dict(orientation="h"))
         st.plotly_chart(fig,use_container_width=True)
         if f:
             out=pd.DataFrame({"date":np.asarray(f["dates"]).astype(str),"forecast":f["values"]})
             if f["bounds"] is not None: out["lower"]=f["bounds"][:,0]; out["upper"]=f["bounds"][:,1]
             st.dataframe(out,use_container_width=True,hide_index=True)
-            st.download_button("Exporter la prévision CSV",out.to_csv(index=False).encode("utf-8"),file_name="timesfm_forecast.csv",mime="text/csv")
-with history:
-    st.markdown("### Historique des tâches")
+            st.download_button("Télécharger le CSV de prévision",out.to_csv(index=False).encode("utf-8"),file_name="timesfm_forecast.csv",mime="text/csv")
+with history_tab:
+    st.markdown("### Activité de cette session")
     if st.session_state.tasks: st.dataframe(pd.DataFrame(st.session_state.tasks),use_container_width=True,hide_index=True)
-    else: st.info("Aucune tâche exécutée dans cette session.")
+    else: st.info("Les analyses et prévisions exécutées apparaîtront ici.")
+st.markdown('<div class="muted" style="text-align:center;padding:16px 0">TimesFM AI Studio · Chat séries temporelles · Le mode de secours est indiqué dans le statut du moteur</div>',unsafe_allow_html=True)
+
+
 st.markdown('<div class="mono" style="margin-top:22px">TIMESFM AI STUDIO · Interface OpenClaw-inspired · Chat local à commandes (pas de LLM généraliste configuré)</div>',unsafe_allow_html=True)
