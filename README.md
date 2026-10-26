@@ -2,7 +2,7 @@
 
 Interface web sombre inspirée des consoles d'agents IA, dédiée aux séries temporelles : chat à commandes, import CSV, analyse descriptive, prévision, graphique et export.
 
-> Le chat actuel exécute des commandes locales prédéfinies. Ce n'est pas encore un chatbot LLM libre. Le moteur TimesFM officiel est tenté en premier ; un fallback statistique est affiché clairement si le chargement du modèle échoue.
+> Le chat actuel exécute des commandes locales prédéfinies. Ce n'est pas encore un chatbot LLM libre. Le moteur TimesFM 2.5 est tenté en premier ; un fallback statistique est affiché clairement si le chargement du modèle échoue. La dépendance Python est limitée à TimesFM 2.x pour éviter une migration API implicite.
 
 ## Fonctions
 
@@ -50,7 +50,7 @@ L'import attend au minimum 10 points numériques valides. Si une colonne date es
 
 ## Modèle et performances
 
-L'inférence officielle tente de charger `google/timesfm-2.5-200m-pytorch` depuis Hugging Face. Le premier lancement peut télécharger plusieurs fichiers et demander de la mémoire. Si ce chargement échoue, l'application utilise une extrapolation linéaire de secours et indique ce choix dans le statut du moteur. Ce résultat de secours n'est pas une prédiction TimesFM et les bandes affichées sont indicatives, pas des intervalles de confiance calibrés.
+L'inférence officielle tente de charger `google/timesfm-2.5-200m-pytorch` depuis Hugging Face. Le projet officiel publie également TimesFM 3.0 ; cette application reste volontairement sur le checkpoint 2.5 (poids sous Apache-2.0) et la série de versions Python 2.x tant qu'une migration distincte n'a pas été intégrée et testée. Le premier lancement peut télécharger plusieurs fichiers et demander de la mémoire. Si ce chargement échoue, l'application utilise une extrapolation linéaire de secours et indique ce choix dans le statut du moteur. Ce résultat de secours n'est pas une prédiction TimesFM et les bandes affichées sont indicatives, pas des intervalles de confiance calibrés.
 
 ## Développement
 
