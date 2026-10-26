@@ -121,7 +121,8 @@ def openrouter_chat(prompt, api_key, model):
     for item in st.session_state.messages[-16:]:
         if item.get("role") in ("user","assistant"):
             messages.append({"role":item["role"],"content":str(item.get("content",""))[:8000]})
-    messages.append({"role":"user","content":prompt})
+    if not messages or messages[-1].get("role") != "user" or messages[-1].get("content") != prompt:
+        messages.append({"role":"user","content":prompt})
     response=requests.post(
         "https://openrouter.ai/api/v1/chat/completions",
         headers={"Authorization":f"Bearer {api_key}","Content-Type":"application/json",
@@ -174,7 +175,7 @@ with st.sidebar:
             help="Saisie en session uniquement. Pour une configuration durable, utilise la variable d’environnement OPENROUTER_API_KEY."
         )
     st.text_input(
-        "Modèle OpenRouter",key="openrouter_model",
+        "Modèle OpenRouter",key="openrouter_model",value="openrouter/auto",
         help="Exemple : openrouter/auto ou l’identifiant exact d’un modèle disponible sur OpenRouter."
     )
     st.caption("La clé sert à authentifier les requêtes envoyées à OpenRouter. Ne la publie jamais dans Git.")
