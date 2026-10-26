@@ -1,0 +1,23 @@
+services:
+  timesfm-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: timesfm-ai-studio
+    ports:
+      - "${TIMESFM_PORT:-8501}:8501"
+    environment:
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+      - HF_HOME=/root/.cache/huggingface
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health',timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+
+volumes:
+  hf-cache:
