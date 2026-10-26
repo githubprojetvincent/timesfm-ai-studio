@@ -100,6 +100,7 @@ def machine_learning_forecast(values, horizon: int = 30, min_train_size: int | N
         "Gradient Boosting": lambda: HistGradientBoostingRegressor(max_iter=120, max_leaf_nodes=15, l2_regularization=1.0, random_state=42),
     }
     scores = []
+    baseline_scores = []
     for name, factory in candidates.items():
         actuals, forecasts = [], []
         for split in split_points:
@@ -120,9 +121,32 @@ def machine_learning_forecast(values, horizon: int = 30, min_train_size: int | N
             mae = float(np.mean(np.abs(err)))
             rmse = float(np.sqrt(np.mean(err ** 2)))
             scores.append({"model": name, "mae": mae, "rmse": rmse, "n": len(actuals)})
+    # Compare the ML models with simple baselines on the exact same chronological windows.
+    for name in ("Dernière valeur", "Saisonnier (lag 7)", "Tendance linéaire"):
+        actuals, forecasts = [], []
+        for split in split_points:
+            train = y[:split]
+            stop = min(len(y), split + eval_size)
+            if stop <= split:
+                continue
+            if name == "Dernière valeur":
+                pred = np.repeat(train[-1], stop - split)
+            elif name == "Saisonnier (lag 7)":
+                pred = np.asarray([train[-7 + (i % 7)] if len(train) >= 7 else train[-1] for i in range(stop-split)])
+            else:
+                tx = np.arange(len(train), dtype=float)
+                slope, intercept = np.polyfit(tx, train, 1)
+                pred = slope * np.arange(len(train), stop, dtype=float) + intercept
+            forecasts.extend(np.asarray(pred, dtype=float).tolist())
+            actuals.extend(y[split:stop].tolist())
+        if actuals:
+            err = np.asarray(actuals) - np.asarray(forecasts)
+            baseline_scores.append({"model": name, "mae": float(np.mean(np.abs(err))),
+                                     "rmse": float(np.sqrt(np.mean(err ** 2))), "n": len(actuals)})
     if not scores:
         raise RuntimeError("Pas assez de fenêtres pour comparer les modèles ML.")
     scores.sort(key=lambda item: (item["mae"], item["rmse"]))
+    baseline_scores.sort(key=lambda item: (item["mae"], item["rmse"]))
     best = scores[0]
     X_all, y_all = _make_supervised(y)
     final_model = candidates[best["model"]]()
@@ -132,9 +156,39 @@ def machine_learning_forecast(values, horizon: int = 30, min_train_size: int | N
         "forecast": predictions,
         "best_model": best["model"],
         "scores": scores,
+        "baseline_scores": baseline_scores,
         "mae": best["mae"],
         "rmse": best["rmse"],
         "validation_points": best["n"],
         "history_points": len(y),
         "horizon": horizon,
+    }
+
+
+def detect_anomalies(values, window: int = 15, threshold: float = 3.5):
+    """Robust rolling median/MAD detector; returns index, value, score and local baseline."""
+    y = np.asarray(values, dtype=float)
+    if y.ndim != 1 or len(y) < 10 or not np.isfinite(y).all():
+        raise ValueError("La détection d’anomalies exige au moins 10 valeurs numériques finies.")
+    window = max(5, min(int(window), max(5, len(y)//2)))
+    scores = np.zeros(len(y), dtype=float)
+    baseline = np.full(len(y), np.nan, dtype=float)
+    for i in range(len(y)):
+        start = max(0, i-window)
+        past = y[start:i]
+        if len(past) < 5:
+            continue
+        med = float(np.median(past))
+        mad = float(np.median(np.abs(past-med)))
+        scale = max(1.4826*mad, float(np.std(past))*0.05, 1e-9)
+        baseline[i] = med
+        scores[i] = abs(y[i]-med)/scale
+    found = np.flatnonzero(scores >= float(threshold))
+    return {
+        "indices": found,
+        "values": y[found],
+        "scores": scores[found],
+        "baseline": baseline,
+        "threshold": float(threshold),
+        "window": window,
     }
