@@ -22,9 +22,6 @@ class ForecastCoreTests(unittest.TestCase):
         self.assertEqual(core.validate_horizon(9999), 512)
         self.assertEqual(core.validate_horizon(0), 1)
 
-if __name__ == "__main__":
-    unittest.main()
-
     def test_ml_requires_enough_observations(self):
         with self.assertRaises(ValueError):
             core.machine_learning_forecast(np.arange(20, dtype=float), 5)
@@ -37,3 +34,6 @@ if __name__ == "__main__":
         self.assertTrue(np.isfinite(result["forecast"]).all())
         self.assertGreaterEqual(len(result["scores"]), 2)
         self.assertIn("mae", result)
+
+if __name__ == "__main__":
+    unittest.main()
