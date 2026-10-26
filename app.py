@@ -356,6 +356,39 @@ with ml_tab:
             st.caption(f"Scores calculés sur {result['validation_points']} points de validation. Ils mesurent les erreurs passées, pas une garantie des performances futures.")
             scores=pd.DataFrame(result["scores"]).sort_values("mae")
             st.dataframe(scores,use_container_width=True,hide_index=True)
+            st.markdown("#### Comparaison avec des références simples")
+            baseline_df=pd.DataFrame(result.get("baseline_scores",[])).sort_values("mae")
+            if not baseline_df.empty:
+                st.dataframe(baseline_df,use_container_width=True,hide_index=True)
+                best_baseline=float(baseline_df.iloc[0]["mae"])
+                improvement=(best_baseline-result["mae"])/best_baseline*100 if best_baseline>0 else 0.0
+                if improvement>0:
+                    st.success(f"Le meilleur modèle ML réduit la MAE de {improvement:.1f}% par rapport à la meilleure référence simple.")
+                else:
+                    st.warning("Le machine learning ne bat pas la meilleure référence simple sur cette validation. Envisage de garder le modèle simple.")
+            with st.expander("Détecter les anomalies historiques"):
+                anomaly_window=st.slider("Fenêtre de référence",5,max(5,min(60,len(ml_series)//2)),value=min(15,max(5,len(ml_series)//2)),key="anomaly_window")
+                anomaly_threshold=st.slider("Seuil d’anomalie",2.0,6.0,3.5,0.5,key="anomaly_threshold")
+                if st.button("Analyser les anomalies",key="run_anomaly"):
+                    try:
+                        from core import detect_anomalies
+                        found=detect_anomalies(ml_series,anomaly_window,anomaly_threshold)
+                        anomaly_dates=st.session_state.dates if st.session_state.dates is not None else np.arange(len(ml_series))
+                        if len(found["indices"]):
+                            anomaly_df=pd.DataFrame({"index":found["indices"],"date":np.asarray(anomaly_dates)[found["indices"]].astype(str),"value":found["values"],"score":found["scores"]})
+                            st.session_state.ml_anomalies=anomaly_df
+                        else:
+                            st.session_state.ml_anomalies=pd.DataFrame(columns=["index","date","value","score"])
+                        st.session_state.ml_anomaly_count=len(found["indices"])
+                    except Exception as exc:
+                        st.error(f"Détection impossible : {exc}")
+                if "ml_anomalies" in st.session_state:
+                    if st.session_state.get("ml_anomaly_count",0):
+                        st.warning(f"{st.session_state.ml_anomaly_count} point(s) atypique(s) détecté(s). Ce sont des alertes statistiques à vérifier, pas nécessairement des erreurs.")
+                        st.dataframe(st.session_state.ml_anomalies,use_container_width=True,hide_index=True)
+                        st.download_button("Exporter les anomalies",st.session_state.ml_anomalies.to_csv(index=False).encode("utf-8"),file_name="timesfm_anomalies.csv",mime="text/csv")
+                    else:
+                        st.success("Aucune anomalie au-dessus du seuil choisi.")
             ml_dates=None
             if st.session_state.dates is not None and len(st.session_state.dates)>1:
                 delta=st.session_state.dates.to_series().diff().dropna().median()
